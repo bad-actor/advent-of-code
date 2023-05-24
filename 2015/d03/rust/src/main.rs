@@ -11,14 +11,11 @@ fn p1() {
     let filename = "input_1.txt";
     let file = File::open(filename).unwrap();
     let lines = io::BufReader::new(file).lines();
-    let mut location: (i32, i32) = (0, 0);
-    let mut houses = HashSet::from([location]);
+    let mut santa: (i32, i32) = (0, 0);
+    let mut houses = HashSet::from([santa]);
     for line in lines {
         let directions = line.unwrap();
-        for d in directions.chars() {
-            location = update_location(location, d);
-            houses.insert(location);
-        }
+        visit_houses(&mut [&mut santa], directions, &mut houses)
     }
     println!("{}", houses.len());
 }
@@ -32,31 +29,38 @@ fn p2() {
     let mut houses = HashSet::from([santa, robot]);
     for line in lines {
         let directions = line.unwrap();
-        for (i, d) in directions.chars().enumerate() {
-            if i % 2 == 0 {
-                santa = update_location(santa, d);
-                houses.insert(santa);
-            } else {
-                robot = update_location(robot, d);
-                houses.insert(robot);
-            }
-        }
+        visit_houses(&mut [&mut santa, &mut robot], directions, &mut houses)
     }
     println!("{}", houses.len());
 }
 
-fn update_location(start: (i32, i32), direction: char) -> (i32, i32) {
-    let mut location = start;
-    if direction == '<' {
-        location.0 -= 1;
-    } else if direction == '>' {
-        location.0 += 1;
-    } else if direction == '^' {
-        location.1 += 1;
-    } else if direction == 'v' {
-        location.1 -= 1;
+fn visit_houses(
+    location: &mut [&mut (i32, i32)],
+    directions: String,
+    houses: &mut HashSet<(i32, i32)>,
+) {
+    for (i, d) in directions.chars().enumerate() {
+        update_location(location[i % location.len()], d);
+        houses.insert(*location[i % location.len()]);
     }
-    return location;
+}
+
+fn update_location(location: &mut (i32, i32), direction: char) {
+    match direction {
+        '<' => {
+            location.0 -= 1;
+        }
+        '>' => {
+            location.0 += 1;
+        }
+        '^' => {
+            location.1 += 1;
+        }
+        'v' => {
+            location.1 -= 1;
+        }
+        _ => {}
+    }
 }
 
 #[cfg(test)]
@@ -64,17 +68,70 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_update_location() {
-        let (location, houses) = visit_houses((0, 0), ">".to_string(), 1);
-        assert_eq!((1, 0), location);
-        assert_eq!(1, houses.len());
-
-        let (location, houses) = visit_houses((0, 0), "^>v<".to_string(), 1);
-        assert_eq!((0, 0), location);
-        assert_eq!(4, houses.len());
-
-        let (location, houses) = visit_houses((0, 0), "^v^v^v^v^v".to_string(), 1);
-        assert_eq!((0, 0), location);
+    fn test_p1_1() {
+        let mut santa = (0, 0);
+        let mut houses = HashSet::from_iter([santa]);
+        visit_houses(&mut [&mut santa], ">".to_string(), &mut houses);
+        assert_eq!((1, 0), santa);
         assert_eq!(2, houses.len());
+    }
+
+    #[test]
+    fn test_p1_2() {
+        let mut santa = (0, 0);
+        let mut houses = HashSet::from_iter([santa]);
+        visit_houses(&mut [&mut santa], "^>v<".to_string(), &mut houses);
+        assert_eq!((0, 0), santa);
+        assert_eq!(4, houses.len());
+    }
+
+    #[test]
+    fn test_p1_3() {
+        let mut santa = (0, 0);
+        let mut houses = HashSet::from_iter([santa]);
+        visit_houses(&mut [&mut santa], "^v^v^v^v^v".to_string(), &mut houses);
+        assert_eq!((0, 0), santa);
+        assert_eq!(2, houses.len());
+    }
+
+    #[test]
+    fn test_p2_1() {
+        let mut santa = (0, 0);
+        let mut robot = (0, 0);
+        let mut houses = HashSet::from_iter([santa, robot]);
+        visit_houses(&mut [&mut santa, &mut robot], "^v".to_string(), &mut houses);
+        assert_eq!((0, 1), santa);
+        assert_eq!((0, -1), robot);
+        assert_eq!(3, houses.len());
+    }
+
+    #[test]
+    fn test_p2_2() {
+        let mut santa = (0, 0);
+        let mut robot = (0, 0);
+        let mut houses = HashSet::from_iter([santa, robot]);
+        visit_houses(
+            &mut [&mut santa, &mut robot],
+            "^>v<".to_string(),
+            &mut houses,
+        );
+        assert_eq!((0, 0), santa);
+        assert_eq!((0, 0), robot);
+        assert_eq!(3, houses.len());
+    }
+
+    #[test]
+    fn test_p2_3() {
+        let mut santa = (0, 0);
+        let mut robot = (0, 0);
+        let mut houses = HashSet::from_iter([santa, robot]);
+        visit_houses(
+            &mut [&mut santa, &mut robot],
+            "^v^v^v^v^v".to_string(),
+            &mut houses,
+        );
+        assert_eq!((0, 5), santa);
+        assert_eq!((0, -5), robot);
+        assert_eq!(11, houses.len());
     }
 }
