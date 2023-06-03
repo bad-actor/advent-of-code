@@ -7,6 +7,7 @@ use std::ops::RangeInclusive;
 
 fn main() {
     p1();
+    p2();
 }
 
 fn p1() {
@@ -28,6 +29,27 @@ fn p1() {
         if *light {
             count += 1
         }
+    }
+    println!("{}", count)
+}
+
+fn p2() {
+    let filename = "input_1.txt";
+    let file = File::open(filename).unwrap();
+    let lines = io::BufReader::new(file).lines();
+
+    let mut lights = vec![vec![0u8; 1000]; 1000];
+    let mut count: u32 = 0;
+
+    for line in lines {
+        let s = line.as_ref().unwrap().as_str();
+        let command = parse_command(s);
+        for light in iterate_over_patch(&mut lights, command.x, command.y) {
+            adjust_brightness(command.command_type, light);
+        }
+    }
+    for light in iterate_over_patch(&mut lights, 0..=999, 0..=999) {
+        count += *light as u32;
     }
     println!("{}", count)
 }
@@ -80,6 +102,22 @@ fn execute_command(command_type: CommandType, light: &mut bool) {
     }
 }
 
+fn adjust_brightness(command_type: CommandType, light: &mut u8) {
+    match command_type {
+        CommandType::TurnOn => {
+            *light += 1u8;
+        }
+        CommandType::TurnOff => {
+            if *light > 0u8 {
+                *light -= 1u8;
+            }
+        }
+        CommandType::Toggle => {
+            *light += 2u8;
+        }
+    }
+}
+
 struct Command {
     command_type: CommandType,
     x: RangeInclusive<usize>,
@@ -115,18 +153,18 @@ mod tests {
     fn test_parse_command() {
         let command = parse_command("turn on 0,0 through 999,999");
         assert_eq!(command.command_type, CommandType::TurnOn);
-        assert_eq!(command.x, 0..=0);
-        assert_eq!(command.y, 999..=999);
+        assert_eq!(command.x, 0..=999);
+        assert_eq!(command.y, 0..=999);
 
         let command = parse_command("toggle 0,0 through 999,0");
         assert_eq!(command.command_type, CommandType::Toggle);
-        assert_eq!(command.x, 0..=0);
-        assert_eq!(command.y, 999..=0);
+        assert_eq!(command.x, 0..=999);
+        assert_eq!(command.y, 0..=0);
 
         let command = parse_command("turn off 499,499 through 500,500");
         assert_eq!(command.command_type, CommandType::TurnOff);
-        assert_eq!(command.x, 499..=499);
-        assert_eq!(command.y, 500..=500);
+        assert_eq!(command.x, 499..=500);
+        assert_eq!(command.y, 499..=500);
     }
 
     #[test]
@@ -181,5 +219,44 @@ mod tests {
             }
         }
         assert_eq!(count, 1000000);
+    }
+
+    #[test]
+    fn test_adjust_brightness_turn_on() {
+        let mut m = vec![
+            vec![1u8, 5u8, 2u8],
+            vec![0u8, 4u8, 1u8],
+            vec![8u8, 4u8, 6u8],
+        ];
+        adjust_brightness(CommandType::TurnOn, &mut m[0][1]);
+        assert_eq!(m[0][1], 6);
+        adjust_brightness(CommandType::TurnOn, &mut m[1][0]);
+        assert_eq!(m[1][0], 1);
+    }
+
+    #[test]
+    fn test_adjust_brightness_turn_off() {
+        let mut m = vec![
+            vec![1u8, 5u8, 2u8],
+            vec![0u8, 4u8, 1u8],
+            vec![8u8, 4u8, 6u8],
+        ];
+        adjust_brightness(CommandType::TurnOff, &mut m[0][1]);
+        assert_eq!(m[0][1], 4);
+        adjust_brightness(CommandType::TurnOff, &mut m[1][0]);
+        assert_eq!(m[1][0], 0);
+    }
+
+    #[test]
+    fn test_adjust_brightness_toggle() {
+        let mut m = vec![
+            vec![1u8, 5u8, 2u8],
+            vec![0u8, 4u8, 1u8],
+            vec![8u8, 4u8, 6u8],
+        ];
+        adjust_brightness(CommandType::Toggle, &mut m[0][1]);
+        assert_eq!(m[0][1], 7);
+        adjust_brightness(CommandType::Toggle, &mut m[1][0]);
+        assert_eq!(m[1][0], 2);
     }
 }
