@@ -5,8 +5,13 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::sync::Mutex;
 
+lazy_static! {
+    static ref CACHE: Mutex<HashMap<String, u16>> = Mutex::new(HashMap::new());
+}
+
 fn main() {
     p1();
+    p2();
 }
 
 fn p1() {
@@ -15,6 +20,25 @@ fn p1() {
     let lines = io::BufReader::new(file).lines();
 
     let mut signals: HashMap<String, Command> = HashMap::new();
+    CACHE.lock().unwrap().clear();
+
+    for line in lines {
+        let s = line.as_ref().unwrap().as_str();
+        let command = parse_command(s);
+        signals.insert(command.output.to_owned(), command);
+    }
+    let signal = calculate_signal("a", &signals);
+    println!("{}", signal)
+}
+
+fn p2() {
+    let filename = "input_1.txt";
+    let file = File::open(filename).unwrap();
+    let lines = io::BufReader::new(file).lines();
+
+    let mut signals: HashMap<String, Command> = HashMap::new();
+    CACHE.lock().unwrap().clear();
+    CACHE.lock().unwrap().insert("b".to_string(), 956);
 
     for line in lines {
         let s = line.as_ref().unwrap().as_str();
@@ -60,10 +84,6 @@ fn parse_command(cmd: &str) -> Command {
 }
 
 fn calculate_signal(signal: &str, signals: &HashMap<String, Command>) -> u16 {
-    lazy_static! {
-        static ref CACHE: Mutex<HashMap<String, u16>> = Mutex::new(HashMap::new());
-    }
-
     if CACHE.lock().unwrap().contains_key(signal) {
         return CACHE.lock().unwrap()[signal];
     }
